@@ -18,8 +18,9 @@ import (
 func main() {
 
 	app := cli.NewApp()
-	app.Name = "AWS Device Farm cli"
+	app.Name = "devicefarm-cli"
 	app.Usage = "allows you to interact with AWS devicefarm from the command line"
+	app.Version = "0.0.1"
 
 	app.Commands = []cli.Command{
 		{

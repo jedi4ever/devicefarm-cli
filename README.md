@@ -3,8 +3,9 @@
 > A Command-Line interface to AWS Devicefarm , but humans don't use ARNs. Written in golang for maximum deployability
 
 Current State: 
-- managed to use most documented api calls and succeeded in running a test and getting the results.
-- Have a look in the code.
+- not usable YET , but SOON ... 
+- Have a look in the code to get a glimpse of how things work with AWS Device Farm farm
+- I managed to use most documented api calls and succeeded in running a test and getting the results.
 
 Things I want to cover:
 - upload of all elements
@@ -17,6 +18,40 @@ Things I want to cover:
 
 Cleanup will happen soon!
 
+# CLI
+
+`
+NAME:
+   devicefarm-cli - allows you to interact with AWS devicefarm from the command line
+
+USAGE:
+   devicefarm-cli [global options] command [command options] [arguments...]
+
+VERSION:
+   0.0.1
+
+AUTHOR(S):
+
+COMMANDS:
+   projects     manage the projects
+   artifacts    manage the artifacts
+   devicepools  manage the device pools
+   devices      manage the devices
+   jobs         manage the jobs
+   runs         manage the runs
+   samples      manage the samples
+   suites       manage the suites
+   tests        manage the tests
+   problems     manage the problems
+   upload       manages the uploads
+   help, h      Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h           show help
+   --version, -v        print the version
+
+`
+
 # Gotchas so far:
 - The upload urls aws provides are pre-signed s3 urls. when you directly pass this to golang newhttprequest is converts the path & query string internal. Therefore the request to get it gets a bad signature error. You need to use URL.raw_query & URL.opaque when creating the request
 - The user on aws it runs under is called 'rwx'
@@ -27,7 +62,9 @@ Cleanup will happen soon!
 - the extention of test results is inconsistent: sometimes it's 'xml' 'json' but '.png' (with the dot in the extension)
 - listArtifacts API doc is incorrect: for the type you can only specify "LOG", "FILE", "SCREENSHOT"
 - listArtificats doesn't take the options Name & Extension to filter on specific one
-- Pi found in the api of certain devices `
+- Pi found in the api of certain devices 
+
+`
 API Result #aws #devicefarm :
 
        CPU: {
@@ -35,7 +72,8 @@ API Result #aws #devicefarm :
          Clock: 3.14159,
          Frequency: "foo"
        },
-       `
+`
+
 - The test devices sometimes suffer from a DNS server not responding
 - Be sure to crank up the timeouts in your test as devices can be slow
 - I'd love to have the tests tagable like servers so I can do the billing per customer
