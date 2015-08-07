@@ -1,0 +1,5 @@
+trials
+*.apk
+*.ipa
+*.zip
+devicefarm-cli
