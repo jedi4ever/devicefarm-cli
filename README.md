@@ -20,7 +20,7 @@ Cleanup will happen soon!
 
 # CLI
 
-`
+```
 NAME:
    devicefarm-cli - allows you to interact with AWS devicefarm from the command line
 
@@ -50,7 +50,8 @@ GLOBAL OPTIONS:
    --help, -h           show help
    --version, -v        print the version
 
-`
+```
+
 
 # Gotchas so far:
 - The upload urls aws provides are pre-signed s3 urls. when you directly pass this to golang newhttprequest is converts the path & query string internal. Therefore the request to get it gets a bad signature error. You need to use URL.raw_query & URL.opaque when creating the request
