@@ -1,6 +1,6 @@
 # Description
 
-> A Command-Line interface to AWS Devicefarm , but humans don't use ARNs. Written in golang for maximum deployability
+> A Command-Line interface to AWS Devicefarm , because humans don't use ARNs. Written in golang for maximum deployability
 
 Current State: 
 - not usable YET , but SOON ... 
