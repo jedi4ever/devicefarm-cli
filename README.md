@@ -1,9 +1,10 @@
 # Description
-This is the start (poc code currently) of an AWS Device Farm cli utility.
 
-It will provide a more human & continous friendly CLI tool.
+> A Command-Line interface to AWS Devicefarm , but humans don't use ARNs. Written in golang for maximum deployability
 
-Have a look in the code.
+Current State: 
+- managed to use most documented api calls and succeeded in running a test and getting the results.
+- Have a look in the code.
 
 Things I want to cover:
 - upload of all elements
@@ -14,7 +15,7 @@ Things I want to cover:
 - provided binaries & packages & docker instance
 - make it slack friendly for reports
 
-cleanup will happen soon!
+Cleanup will happen soon!
 
 # Gotchas so far:
 - The upload urls aws provides are pre-signed s3 urls. when you directly pass this to golang newhttprequest is converts the path & query string internal. Therefore the request to get it gets a bad signature error. You need to use URL.raw_query & URL.opaque when creating the request
