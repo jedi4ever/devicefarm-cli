@@ -65,7 +65,7 @@ GLOBAL OPTIONS:
 - listArtificats doesn't take the options Name & Extension to filter on specific one
 - Pi found in the api of certain devices 
 
-`
+```
 API Result #aws #devicefarm :
 
        CPU: {
@@ -73,7 +73,8 @@ API Result #aws #devicefarm :
          Clock: 3.14159,
          Frequency: "foo"
        },
-`
+```
+
 
 - The test devices sometimes suffer from a DNS server not responding
 - Be sure to crank up the timeouts in your test as devices can be slow
