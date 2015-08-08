@@ -3,3 +3,4 @@ trials
 *.ipa
 *.zip
 devicefarm-cli
+ENV.sh

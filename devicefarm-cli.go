@@ -59,6 +59,11 @@ func main() {
 							Usage:  "run arn or run description",
 						},
 						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
+						cli.StringFlag{
 							Name:   "type",
 							EnvVar: "DF_ARTIFACT_TYPE",
 							Usage:  "type of the artifact [LOG,FILE,SCREENSHOT]",
@@ -66,8 +71,17 @@ func main() {
 					},
 					Action: func(c *cli.Context) {
 						runArn := c.String("run")
+						jobArn := c.String("job")
+
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+
 						artifactType := c.String("type")
-						listArtifacts(svc, runArn, artifactType)
+						listArtifacts(svc, filterArn, artifactType)
 					},
 				},
 			},
@@ -221,10 +235,22 @@ func main() {
 							EnvVar: "DF_RUN",
 							Usage:  "run arn or run description",
 						},
+						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
 					},
 					Action: func(c *cli.Context) {
 						runArn := c.String("run")
-						listSuites(svc, runArn)
+						jobArn := c.String("job")
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+						listSuites(svc, filterArn)
 					},
 				},
 			},
@@ -437,10 +463,10 @@ func listUniqueProblems(svc *devicefarm.DeviceFarm, runArn string) {
 }
 
 /* List suites */
-func listSuites(svc *devicefarm.DeviceFarm, runArn string) {
+func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 
 	listReq := &devicefarm.ListSuitesInput{
-		ARN: aws.String(runArn),
+		ARN: aws.String(filterArn),
 	}
 
 	resp, err := svc.ListSuites(listReq)
@@ -474,14 +500,27 @@ func scheduleRun(svc *devicefarm.DeviceFarm, runName string, projectArn string, 
 
 /* List Artifacts */
 
-func listArtifacts(svc *devicefarm.DeviceFarm, runArn string, artifactType string) {
+func listArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactType string) {
+
+	fmt.Println(filterArn)
 
 	listReq := &devicefarm.ListArtifactsInput{
-		ARN:  aws.String(runArn),
-		Type: aws.String(artifactType),
+		ARN: aws.String(filterArn),
 	}
 
+	listReq.Type = aws.String("LOG")
 	resp, err := svc.ListArtifacts(listReq)
+	failOnErr(err, "error listing artifacts")
+	fmt.Println(awsutil.Prettify(resp))
+
+	listReq.Type = aws.String("SCREENSHOT")
+	resp, err = svc.ListArtifacts(listReq)
+	failOnErr(err, "error listing artifacts")
+
+	fmt.Println(awsutil.Prettify(resp))
+
+	listReq.Type = aws.String("FILE")
+	resp, err = svc.ListArtifacts(listReq)
 	failOnErr(err, "error listing artifacts")
 
 	fmt.Println(awsutil.Prettify(resp))
