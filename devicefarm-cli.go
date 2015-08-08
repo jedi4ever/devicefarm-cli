@@ -57,13 +57,17 @@ func main() {
 							Name:   "run",
 							EnvVar: "DF_RUN",
 							Usage:  "run arn or run description",
-							Value:  "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755",
+						},
+						cli.StringFlag{
+							Name:   "type",
+							EnvVar: "DF_ARTIFACT_TYPE",
+							Usage:  "type of the artifact [LOG,FILE,SCREENSHOT]",
 						},
 					},
 					Action: func(c *cli.Context) {
 						runArn := c.String("run")
-
-						listArtifacts(svc, runArn)
+						artifactType := c.String("type")
+						listArtifacts(svc, runArn, artifactType)
 					},
 				},
 			},
@@ -80,7 +84,6 @@ func main() {
 							Name:   "project",
 							EnvVar: "DF_PROJECT",
 							Usage:  "project arn or project description",
-							Value:  "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76",
 						},
 					},
 					Action: func(c *cli.Context) {
@@ -116,7 +119,6 @@ func main() {
 							Name:   "run",
 							EnvVar: "DF_RUN",
 							Usage:  "run arn or run description",
-							Value:  "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755",
 						},
 					},
 					Action: func(c *cli.Context) {
@@ -139,7 +141,6 @@ func main() {
 							Name:   "project",
 							EnvVar: "DF_PROJECT",
 							Usage:  "project arn or project description",
-							Value:  "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76",
 						},
 					},
 					Action: func(c *cli.Context) {
@@ -150,25 +151,45 @@ func main() {
 				{
 					Name:  "schedule",
 					Usage: "schedule a run",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+						cli.StringFlag{
+							Name:   "device-pool",
+							EnvVar: "DF_DEVICE_POOL",
+							Usage:  "devicepool arn or devicepool name",
+						},
+						cli.StringFlag{
+							Name:   "name",
+							EnvVar: "DF_RUN_NAME",
+							Usage:  "name to give to the run that is scheduled",
+						},
+						cli.StringFlag{
+							Name:  "test-type",
+							Usage: "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
+						},
+						cli.StringFlag{
+							Name:   "test",
+							Usage:  "arn or name of the test upload to schedule",
+							EnvVar: "DF_TEST",
+						},
+						cli.StringFlag{
+							Name:   "app",
+							Usage:  "arn or name of the app upload to schedule",
+							EnvVar: "DF_APP",
+						},
+					},
 					Action: func(c *cli.Context) {
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
-						appUploadArn := "arn:aws:devicefarm:us-west-2:110440800955:upload:f7952cc6-5833-47f3-afef-c149fb4e7c76/dbbb0b81-5c53-42b1-b1b8-e6239124ca3a"
-						devicePoolArn := "arn:aws:devicefarm:us-west-2:110440800955:devicepool:f7952cc6-5833-47f3-afef-c149fb4e7c76/b51ed696-ab6a-440b-8de0-c947ba442d53"
-						testUploadArn := ""
-						testType := "BUILTIN_FUZZ"
-
-						/*
-							BUILTIN_FUZZ: The built-in fuzz type.
-							BUILTIN_EXPLORER: For Android, an app explorer that will traverse an Android app, interacting with it and capturing screenshots at the same time.
-							APPIUM_JAVA_JUNIT: The Appium Java JUnit type.
-							APPIUM_JAVA_TESTNG: The Appium Java TestNG type.
-							CALABASH: The Calabash type.
-							INSTRUMENTATION: The Instrumentation type.
-							UIAUTOMATION: The uiautomation type.
-							UIAUTOMATOR: The uiautomator type.
-							XCTEST: The XCode test type.
-						*/
-						scheduleRun(svc, projectArn, appUploadArn, devicePoolArn, testUploadArn, testType)
+						projectArn := c.String("project")
+						appUploadArn := c.String("app")
+						runName := c.String("name")
+						devicePoolArn := c.String("device-pool")
+						testUploadArn := c.String("test")
+						testType := c.String("test-type")
+						scheduleRun(svc, runName, projectArn, appUploadArn, devicePoolArn, testUploadArn, testType)
 					},
 				},
 			},
@@ -181,7 +202,8 @@ func main() {
 					Name:  "list",
 					Usage: "list the samples",
 					Action: func(c *cli.Context) {
-						//listSamples()
+						// Not yet implemented
+						// listSamples()
 					},
 				},
 			},
@@ -193,8 +215,15 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the suites",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
 					Action: func(c *cli.Context) {
-						runArn := "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755"
+						runArn := c.String("run")
 						listSuites(svc, runArn)
 					},
 				},
@@ -207,8 +236,15 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the tests", // of a Run
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
 					Action: func(c *cli.Context) {
-						runArn := "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755"
+						runArn := c.String("run")
 						listTests(svc, runArn)
 					},
 				},
@@ -219,10 +255,17 @@ func main() {
 			Usage: "manage the problems",
 			Subcommands: []cli.Command{
 				{
-					Name:  "list",
+					Name: "list",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
 					Usage: "list the problems", // of Test
 					Action: func(c *cli.Context) {
-						runArn := "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755"
+						runArn := c.String("run")
 						listUniqueProblems(svc, runArn)
 					},
 				},
@@ -235,32 +278,50 @@ func main() {
 				{
 					Name:  "create",
 					Usage: "creates an upload",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+						cli.StringFlag{
+							Name:  "name",
+							Usage: "name of the upload",
+						},
+						cli.StringFlag{
+							Name:  "type",
+							Usage: "type of upload [ANDROID_APP,IOS_APP,EXTERNAL_DATA,APPIUM_JAVA_JUNIT_TEST_PACKAGE,APPIUM_JAVA_TESTNG_TEST_PACKAGE,CALABASH_TEST_PACKAGE,INSTRUMENTATION_TEST_PACKAGE,UIAUTOMATOR_TEST_PACKAGE,XCTEST_TEST_PACKAGE",
+						},
+					},
 					Action: func(c *cli.Context) {
-						/*
-							ANDROID_APP: An Android upload.
-							IOS_APP: An iOS upload.
-							EXTERNAL_DATA: An external data upload.
-							APPIUM_JAVA_JUNIT_TEST_PACKAGE: An Appium Java JUnit test package upload.
-							APPIUM_JAVA_TESTNG_TEST_PACKAGE: An Appium Java TestNG test package upload.
-							CALABASH_TEST_PACKAGE: A Calabash test package upload.
-							INSTRUMENTATION_TEST_PACKAGE: An instrumentation upload.
-							UIAUTOMATOR_TEST_PACKAGE: A uiautomator test package upload.
-							XCTEST_TEST_PACKAGE: An XCode test package upload.
-						*/
-
-						uploadName := "test-upload"
-						uploadType := "IOS_APP"
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
+						uploadName := c.String("name")
+						uploadType := c.String("type")
+						projectArn := c.String("project")
 						uploadCreate(svc, uploadName, uploadType, projectArn)
 					},
 				},
 				{
 					Name:  "file",
 					Usage: "uploads an file",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+						cli.StringFlag{
+							Name:  "file",
+							Usage: "path to the file to upload",
+						},
+						cli.StringFlag{
+							Name:  "type",
+							Usage: "type of upload [ANDROID_APP,IOS_APP,EXTERNAL_DATA,APPIUM_JAVA_JUNIT_TEST_PACKAGE,APPIUM_JAVA_TESTNG_TEST_PACKAGE,CALABASH_TEST_PACKAGE,INSTRUMENTATION_TEST_PACKAGE,UIAUTOMATOR_TEST_PACKAGE,XCTEST_TEST_PACKAGE",
+						},
+					},
 					Action: func(c *cli.Context) {
-						uploadType := "IOS_APP"
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
-						uploadFilePath := "a.ipa"
+						uploadType := c.String("type")
+						projectArn := c.String("project")
+						uploadFilePath := c.String("file")
 						uploadPut(svc, uploadFilePath, uploadType, projectArn)
 					},
 				},
@@ -389,13 +450,12 @@ func listSuites(svc *devicefarm.DeviceFarm, runArn string) {
 }
 
 /* Schedule Run */
-func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, appUploadArn string, devicePoolArn string, testUploadArn string, testType string) {
+func scheduleRun(svc *devicefarm.DeviceFarm, runName string, projectArn string, appUploadArn string, devicePoolArn string, testUploadArn string, testType string) {
 
 	runReq := &devicefarm.ScheduleRunInput{
-		// Documentation is pretty horrible , it says AppArn
 		AppARN:        aws.String(appUploadArn),
 		DevicePoolARN: aws.String(devicePoolArn),
-		Name:          aws.String("test me - w00t"),
+		Name:          aws.String(runName),
 		ProjectARN:    aws.String(projectArn),
 		Test: &devicefarm.ScheduleRunTest{
 			Type: aws.String(testType),
@@ -414,19 +474,11 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, appUploadArn str
 
 /* List Artifacts */
 
-// ?? Unclear aws doc
-// https://github.com/aws/aws-sdk-go/blob/master/apis/devicefarm/2015-06-23/api-2.json
-//Name:      aws.String("Calabash JSON Output"),
-//Extension: aws.String("json"),
-//  Extension: ".png", -> wierdos!
-// Name: "i_take_a_screenshot_0",
-func listArtifacts(svc *devicefarm.DeviceFarm, runArn string) {
+func listArtifacts(svc *devicefarm.DeviceFarm, runArn string, artifactType string) {
 
 	listReq := &devicefarm.ListArtifactsInput{
-		ARN: aws.String(runArn),
-		//Type: aws.String("LOG"),
-		//Type: aws.String("FILE"),
-		Type: aws.String("SCREENSHOT"),
+		ARN:  aws.String(runArn),
+		Type: aws.String(artifactType),
 	}
 
 	resp, err := svc.ListArtifacts(listReq)
