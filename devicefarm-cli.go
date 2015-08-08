@@ -354,16 +354,30 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "lists all uploads", // of a Project
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+					},
 					Action: func(c *cli.Context) {
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
+						projectArn := c.String("project")
 						listUploads(svc, projectArn)
 					},
 				},
 				{
 					Name:  "info",
 					Usage: "info about uploads",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "upload",
+							EnvVar: "DF_UPLOAD",
+							Usage:  "upload arn or description",
+						},
+					},
 					Action: func(c *cli.Context) {
-						uploadArn := "arn:aws:devicefarm:us-west-2:110440800955:upload:f7952cc6-5833-47f3-afef-c149fb4e7c76/1d1a6d6e-554d-48d1-b53f-21f80ef94a14"
+						uploadArn := c.String("upload")
 						uploadInfo(svc, uploadArn)
 					},
 				},
