@@ -84,6 +84,41 @@ func main() {
 						listArtifacts(svc, filterArn, artifactType)
 					},
 				},
+				{
+					Name:  "download",
+					Usage: "download the artifacts",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
+						cli.StringFlag{
+							Name:   "type",
+							EnvVar: "DF_ARTIFACT_TYPE",
+							Usage:  "type of the artifact [LOG,FILE,SCREENSHOT]",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						jobArn := c.String("job")
+
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+
+						artifactType := c.String("type")
+						downloadArtifacts(svc, filterArn, artifactType)
+					},
+				},
 			},
 		},
 		{
@@ -568,6 +603,30 @@ func listArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactType st
 	failOnErr(err, "error listing artifacts")
 
 	fmt.Println(awsutil.Prettify(resp))
+}
+
+/* Download Artifacts */
+func downloadArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactType string) {
+
+	fmt.Println(filterArn)
+
+	listReq := &devicefarm.ListArtifactsInput{
+		ARN: aws.String(filterArn),
+	}
+
+	types := []string{"LOG", "SCREENSHOT", "FILE"}
+
+	for _, each := range types {
+		listReq.Type = aws.String(each)
+
+		resp, err := svc.ListArtifacts(listReq)
+		failOnErr(err, "error listing artifacts")
+
+		for _, artifact := range resp.Artifacts {
+			fmt.Printf("[%s.%s] -> [%s]\n", *artifact.Name, *artifact.Extension, *artifact.URL)
+		}
+	}
+
 }
 
 /* List Jobs */
