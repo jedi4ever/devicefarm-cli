@@ -24,6 +24,11 @@ func main() {
 	app.Name = "devicefarm-cli"
 	app.Usage = "allows you to interact with AWS devicefarm from the command line"
 	app.Version = "0.0.1"
+	app.Authors = []cli.Author{
+		cli.Author{Name: "Patrick Debois",
+			Email: "Patrick.Debois@jedi.be",
+		},
+	}
 
 	app.Commands = []cli.Command{
 		{
@@ -34,6 +39,7 @@ func main() {
 					Name:  "list",
 					Usage: "list the projects", // of an account
 					Action: func(c *cli.Context) {
+						fmt.Println(c.Args())
 						listProjects(svc)
 					},
 				},
@@ -46,9 +52,16 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the artifacts", // of a test
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+							Value:  "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755",
+						},
+					},
 					Action: func(c *cli.Context) {
-						// Runs ARN
-						runArn := "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755"
+						runArn := c.String("run")
 
 						listArtifacts(svc, runArn)
 					},
@@ -62,9 +75,17 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the devicepools", //globally
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+							Value:  "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76",
+						},
+					},
 					Action: func(c *cli.Context) {
 
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
+						projectArn := c.String("project")
 						listDevicePools(svc, projectArn)
 					},
 				},
@@ -90,8 +111,16 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the jobs", // of a test
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+							Value:  "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755",
+						},
+					},
 					Action: func(c *cli.Context) {
-						runArn := "arn:aws:devicefarm:us-west-2:110440800955:run:f7952cc6-5833-47f3-afef-c149fb4e7c76/32313b78-95c5-461c-adc7-9d95d2f49755"
+						runArn := c.String("run")
 
 						listJobs(svc, runArn)
 					},
@@ -105,8 +134,16 @@ func main() {
 				{
 					Name:  "list",
 					Usage: "list the runs",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+							Value:  "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76",
+						},
+					},
 					Action: func(c *cli.Context) {
-						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
+						projectArn := c.String("project")
 						listRuns(svc, projectArn)
 					},
 				},
@@ -196,8 +233,8 @@ func main() {
 			Usage: "manages the uploads",
 			Subcommands: []cli.Command{
 				{
-					Name:  "ipa",
-					Usage: "uploads an ipa",
+					Name:  "create",
+					Usage: "creates an upload",
 					Action: func(c *cli.Context) {
 						/*
 							ANDROID_APP: An Android upload.
@@ -218,8 +255,8 @@ func main() {
 					},
 				},
 				{
-					Name:  "put",
-					Usage: "uploads an ipa 2",
+					Name:  "file",
+					Usage: "uploads an file",
 					Action: func(c *cli.Context) {
 						uploadType := "IOS_APP"
 						projectArn := "arn:aws:devicefarm:us-west-2:110440800955:project:f7952cc6-5833-47f3-afef-c149fb4e7c76"
