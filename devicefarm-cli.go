@@ -163,6 +163,36 @@ func main() {
 					},
 				},
 				{
+					Name:  "info",
+					Usage: "get info about a run",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						runInfo(svc, runArn)
+					},
+				},
+				{
+					Name:  "status",
+					Usage: "get status of run",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						runStatus(svc, runArn)
+					},
+				},
+				{
 					Name:  "schedule",
 					Usage: "schedule a run",
 					Flags: []cli.Flag{
@@ -565,6 +595,58 @@ func uploadCreate(svc *devicefarm.DeviceFarm, uploadName string, uploadType stri
 	resp, err := svc.CreateUpload(uploadReq)
 
 	failOnErr(err, "error creating upload")
+	fmt.Println(awsutil.Prettify(resp))
+}
+
+/* Get Run Info */
+func runInfo(svc *devicefarm.DeviceFarm, runArn string) {
+
+	infoReq := &devicefarm.GetRunInput{
+		ARN: aws.String(runArn),
+	}
+
+	resp, err := svc.GetRun(infoReq)
+
+	failOnErr(err, "error getting run info")
+	fmt.Println(awsutil.Prettify(resp))
+}
+
+/* Get Run Status */
+func runStatus(svc *devicefarm.DeviceFarm, runArn string) {
+
+	infoReq := &devicefarm.GetRunInput{
+		ARN: aws.String(runArn),
+	}
+
+	resp, err := svc.GetRun(infoReq)
+
+	failOnErr(err, "error getting run info")
+	fmt.Println(*resp.Run.Status)
+}
+
+/* Get Job Info */
+func jobInfo(svc *devicefarm.DeviceFarm, jobArn string) {
+
+	infoReq := &devicefarm.GetJobInput{
+		ARN: aws.String(jobArn),
+	}
+
+	resp, err := svc.GetJob(infoReq)
+
+	failOnErr(err, "error getting job info")
+	fmt.Println(awsutil.Prettify(resp))
+}
+
+/* Get Suite Info */
+func suiteInfo(svc *devicefarm.DeviceFarm, suiteArn string) {
+
+	infoReq := &devicefarm.GetJobInput{
+		ARN: aws.String(suiteArn),
+	}
+
+	resp, err := svc.GetJob(infoReq)
+
+	failOnErr(err, "error getting suite info")
 	fmt.Println(awsutil.Prettify(resp))
 }
 
