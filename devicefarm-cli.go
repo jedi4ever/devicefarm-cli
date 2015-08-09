@@ -787,9 +787,11 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 
 		// Store type artifacts
 		artifacts[artifactType] = append(artifacts[artifactType], *artifactResp)
-		for _, artifact := range artifactResp.Artifacts {
-			fmt.Println(awsutil.Prettify(artifact))
-		}
+		/*
+			for _, artifact := range artifactResp.Artifacts {
+				fmt.Println(awsutil.Prettify(artifact))
+			}
+		*/
 	}
 
 	respJob, err := svc.ListJobs(jobReq)
@@ -803,7 +805,6 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 		fmt.Printf("%s - %s - %s \n", *job.Name, *job.Device.Model, *job.Device.Os)
 		//fmt.Println(awsutil.Prettify(job))
 
-		//fmt.Println(awsutil.Prettify(job))
 		suiteReq := &devicefarm.ListSuitesInput{
 			ARN: aws.String(*job.ARN),
 		}
@@ -817,9 +818,30 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 			}
 
 			fmt.Printf("-> %s : %s \n----> %s\n", *suite.Name, message, *suite.ARN)
+			artifactsForSuite(artifacts, *suite.ARN)
 		}
 
 		//fmt.Println(awsutil.Prettify(suiteResp))
+	}
+
+}
+
+func artifactsForSuite(allArtifacts map[string][]devicefarm.ListArtifactsOutput, suiteArn string) {
+	artifactTypes := []string{"LOG", "SCREENSHOT", "FILE"}
+
+	r := strings.NewReplacer(":suite:", ":artifact:")
+	artifactPrefix := r.Replace(suiteArn)
+
+	for _, artifactType := range artifactTypes {
+		typedArtifacts := allArtifacts[artifactType]
+		for _, artifactList := range typedArtifacts {
+			for _, artifact := range artifactList.Artifacts {
+				if strings.HasPrefix(*artifact.ARN, artifactPrefix) {
+					fmt.Printf("[%s] %s.%s\n", artifactType, *artifact.Name, *artifact.Extension)
+					//fmt.Printf("[%s] %s.%s\n%s\n", artifactType, *artifact.Name, *artifact.Extension, *artifact.URL)
+				}
+			}
+		}
 	}
 
 }
