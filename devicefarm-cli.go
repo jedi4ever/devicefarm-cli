@@ -811,7 +811,8 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 		fmt.Println("==========================================")
 		time.Sleep(2 * time.Second)
 
-		fmt.Printf("%s - %s - %s \n", *job.Name, *job.Device.Model, *job.Device.Os)
+		jobFriendlyName := fmt.Sprintf("%s - %s - %s", *job.Name, *job.Device.Model, *job.Device.Os)
+
 		//fmt.Println(awsutil.Prettify(job))
 
 		suiteReq := &devicefarm.ListSuitesInput{
@@ -826,8 +827,9 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 				message = *suite.Message
 			}
 
-			fmt.Printf("-> %s : %s \n----> %s\n", *suite.Name, message, *suite.ARN)
-			artifactsForSuite(artifacts, *suite.ARN)
+			fmt.Printf("%s -> %s : %s \n----> %s\n", jobFriendlyName, *suite.Name, message, *suite.ARN)
+			dirPrefix := fmt.Sprintf("report/%s/%s/", jobFriendlyName, *suite.Name)
+			downloadArtifactsForSuite(dirPrefix, artifacts, *suite)
 		}
 
 		//fmt.Println(awsutil.Prettify(suiteResp))
@@ -835,7 +837,8 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 
 }
 
-func artifactsForSuite(allArtifacts map[string][]devicefarm.ListArtifactsOutput, suiteArn string) {
+func downloadArtifactsForSuite(dirPrefix string, allArtifacts map[string][]devicefarm.ListArtifactsOutput, suite devicefarm.Suite) {
+	suiteArn := *suite.ARN
 	artifactTypes := []string{"LOG", "SCREENSHOT", "FILE"}
 
 	r := strings.NewReplacer(":suite:", ":artifact:")
@@ -844,18 +847,21 @@ func artifactsForSuite(allArtifacts map[string][]devicefarm.ListArtifactsOutput,
 	for _, artifactType := range artifactTypes {
 		typedArtifacts := allArtifacts[artifactType]
 		for _, artifactList := range typedArtifacts {
+			count := 0
 			for _, artifact := range artifactList.Artifacts {
 				if strings.HasPrefix(*artifact.ARN, artifactPrefix) {
 					fmt.Printf("[%s] %s.%s\n", artifactType, *artifact.Name, *artifact.Extension)
-					pathFull := strings.Split(suiteArn, ":")[6]
-					pathSuffix := strings.Split(pathFull, "/")
+					//pathFull := strings.Split(suiteArn, ":")[6]
+					//pathSuffix := strings.Split(pathFull, "/")
 					//runId := pathSuffix[0]
 					//jobId := pathSuffix[1]
-					suiteId := pathSuffix[2]
-					artifactId := pathSuffix[3]
-					fileName := fmt.Sprintf("report/%s/%s/%s.%s", suiteId, artifactId, *artifact.Name, *artifact.Extension)
+					//suiteId := pathSuffix[2]
+					//artifactId := pathSuffix[3]
+					fileName := fmt.Sprintf("%s/%d_%s.%s", dirPrefix, count, *artifact.Name, *artifact.Extension)
+					//fileName := fmt.Sprintf("%s/%s/%s/%s.%s", dirPrefix, suiteId, artifactId, *artifact.Name, *artifact.Extension)
 					fmt.Printf("[%s] %s\n%s\n", artifactType, fileName, *artifact.URL)
 					downloadArtifact(fileName, artifact)
+					count++
 				}
 			}
 		}
