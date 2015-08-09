@@ -15,6 +15,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -180,7 +181,7 @@ func main() {
 			},
 		},
 		{
-			Name:  "runs",
+			Name:  "run",
 			Usage: "manage the runs",
 			Subcommands: []cli.Command{
 				{
@@ -211,6 +212,21 @@ func main() {
 					Action: func(c *cli.Context) {
 						runArn := c.String("run")
 						runInfo(svc, runArn)
+					},
+				},
+				{
+					Name:  "report",
+					Usage: "get report about a run",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						runReport(svc, runArn)
 					},
 				},
 				{
@@ -575,18 +591,22 @@ func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 /* Schedule Run */
 func scheduleRun(svc *devicefarm.DeviceFarm, runName string, projectArn string, appUploadArn string, devicePoolArn string, testUploadArn string, testType string) {
 
+	runTest := &devicefarm.ScheduleRunTest{
+		Type: aws.String(testType),
+		//Parameters: // test parameters
+		//Filter: // filter to pass to tests
+	}
+
+	if testUploadArn != "" {
+		runTest.TestPackageARN = aws.String(testUploadArn)
+	}
+
 	runReq := &devicefarm.ScheduleRunInput{
 		AppARN:        aws.String(appUploadArn),
 		DevicePoolARN: aws.String(devicePoolArn),
 		Name:          aws.String(runName),
 		ProjectARN:    aws.String(projectArn),
-		Test: &devicefarm.ScheduleRunTest{
-			Type: aws.String(testType),
-
-			//TestPackageArn: aws.String(testUploadArn)
-			//Parameters: // test parameters
-			//Filter: // filter to pass to tests
-		},
+		Test:          runTest,
 	}
 
 	resp, err := svc.ScheduleRun(runReq)
@@ -731,6 +751,77 @@ func runInfo(svc *devicefarm.DeviceFarm, runArn string) {
 
 	failOnErr(err, "error getting run info")
 	fmt.Println(awsutil.Prettify(resp))
+}
+
+/* Get Run Report */
+func runReport(svc *devicefarm.DeviceFarm, runArn string) {
+
+	infoReq := &devicefarm.GetRunInput{
+		ARN: aws.String(runArn),
+	}
+
+	resp, err := svc.GetRun(infoReq)
+
+	failOnErr(err, "error getting run info")
+	fmt.Printf("%s\n", *resp.Run.Name)
+	//fmt.Println(awsutil.Prettify(resp))
+
+	jobReq := &devicefarm.ListJobsInput{
+		ARN: aws.String(runArn),
+	}
+
+	// Find all artifacts
+	artifactReq := &devicefarm.ListArtifactsInput{
+		ARN: aws.String(runArn),
+	}
+
+	types := []string{"LOG", "SCREENSHOT", "FILE"}
+	artifacts := map[string][]devicefarm.ListArtifactsOutput{}
+
+	for _, artifactType := range types {
+
+		artifactReq.Type = aws.String(artifactType)
+
+		artifactResp, err := svc.ListArtifacts(artifactReq)
+		failOnErr(err, "error getting run info")
+
+		// Store type artifacts
+		artifacts[artifactType] = append(artifacts[artifactType], *artifactResp)
+		for _, artifact := range artifactResp.Artifacts {
+			fmt.Println(awsutil.Prettify(artifact))
+		}
+	}
+
+	respJob, err := svc.ListJobs(jobReq)
+	failOnErr(err, "error getting jobs")
+
+	for _, job := range respJob.Jobs {
+
+		fmt.Println("==========================================")
+		time.Sleep(2 * time.Second)
+
+		fmt.Printf("%s - %s - %s \n", *job.Name, *job.Device.Model, *job.Device.Os)
+		//fmt.Println(awsutil.Prettify(job))
+
+		//fmt.Println(awsutil.Prettify(job))
+		suiteReq := &devicefarm.ListSuitesInput{
+			ARN: aws.String(*job.ARN),
+		}
+		suiteResp, err := svc.ListSuites(suiteReq)
+		failOnErr(err, "error getting run info")
+
+		for _, suite := range suiteResp.Suites {
+			message := ""
+			if suite.Message != nil {
+				message = *suite.Message
+			}
+
+			fmt.Printf("-> %s : %s \n----> %s\n", *suite.Name, message, *suite.ARN)
+		}
+
+		//fmt.Println(awsutil.Prettify(suiteResp))
+	}
+
 }
 
 /* Get Run Status */

@@ -4,3 +4,5 @@ trials
 *.zip
 devicefarm-cli
 ENV.sh
+dist/
+reports/
