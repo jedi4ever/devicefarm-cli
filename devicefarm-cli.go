@@ -661,18 +661,27 @@ func downloadArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactTyp
 		failOnErr(err, "error listing artifacts")
 
 		for index, artifact := range resp.Artifacts {
-			downloadArtifact(index, artifact)
+			fileName := fmt.Sprintf("report/%d-%s.%s", index, *artifact.Name, *artifact.Extension)
+			downloadArtifact(fileName, artifact)
 		}
 	}
 
 }
 
-func downloadArtifact(index int, artifact *devicefarm.Artifact) {
-	fileName := fmt.Sprintf("report/%d-%s.%s", index, *artifact.Name, *artifact.Extension)
+func downloadArtifact(fileName string, artifact *devicefarm.Artifact) {
 
 	url := *artifact.URL
 
+	dirName := path.Dir(fileName)
+	err := os.MkdirAll(dirName, 0777)
+
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
 	fmt.Printf("Downloading [%s] -> [%s]\n", url, fileName)
+
 	downloadURL(url, fileName)
 }
 
@@ -838,7 +847,15 @@ func artifactsForSuite(allArtifacts map[string][]devicefarm.ListArtifactsOutput,
 			for _, artifact := range artifactList.Artifacts {
 				if strings.HasPrefix(*artifact.ARN, artifactPrefix) {
 					fmt.Printf("[%s] %s.%s\n", artifactType, *artifact.Name, *artifact.Extension)
-					//fmt.Printf("[%s] %s.%s\n%s\n", artifactType, *artifact.Name, *artifact.Extension, *artifact.URL)
+					pathFull := strings.Split(suiteArn, ":")[6]
+					pathSuffix := strings.Split(pathFull, "/")
+					//runId := pathSuffix[0]
+					//jobId := pathSuffix[1]
+					suiteId := pathSuffix[2]
+					artifactId := pathSuffix[3]
+					fileName := fmt.Sprintf("report/%s/%s/%s.%s", suiteId, artifactId, *artifact.Name, *artifact.Extension)
+					fmt.Printf("[%s] %s\n%s\n", artifactType, fileName, *artifact.URL)
+					downloadArtifact(fileName, artifact)
 				}
 			}
 		}
