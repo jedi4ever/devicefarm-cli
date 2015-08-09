@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/service/devicefarm"
 	"github.com/codegangsta/cli"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -333,10 +334,22 @@ func main() {
 							EnvVar: "DF_RUN",
 							Usage:  "run arn or run description",
 						},
+						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
 					},
 					Action: func(c *cli.Context) {
 						runArn := c.String("run")
-						listTests(svc, runArn)
+						jobArn := c.String("job")
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+						listTests(svc, filterArn)
 					},
 				},
 			},
@@ -622,10 +635,55 @@ func downloadArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactTyp
 		resp, err := svc.ListArtifacts(listReq)
 		failOnErr(err, "error listing artifacts")
 
-		for _, artifact := range resp.Artifacts {
-			fmt.Printf("[%s.%s] -> [%s]\n", *artifact.Name, *artifact.Extension, *artifact.URL)
+		for index, artifact := range resp.Artifacts {
+			downloadArtifact(index, artifact)
 		}
 	}
+
+}
+
+func downloadArtifact(index int, artifact *devicefarm.Artifact) {
+	fileName := fmt.Sprintf("report/%d-%s.%s", index, *artifact.Name, *artifact.Extension)
+
+	url := *artifact.URL
+
+	fmt.Printf("Downloading [%s] -> [%s]\n", url, fileName)
+	downloadURL(url, fileName)
+}
+
+func downloadURL(url string, fileName string) {
+
+	file, err := os.Create(fileName)
+
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer file.Close()
+
+	check := http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			r.URL.Opaque = r.URL.Path
+			return nil
+		},
+	}
+
+	resp, err := check.Get(url) // add a filter to check redirect
+
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer resp.Body.Close()
+	fmt.Println(resp.Status)
+
+	size, err := io.Copy(file, resp.Body)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%s with %v bytes downloaded", fileName, size)
 
 }
 
