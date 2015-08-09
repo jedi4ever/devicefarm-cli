@@ -414,6 +414,10 @@ func main() {
 							Usage:  "project arn or project description",
 						},
 						cli.StringFlag{
+							Name:  "name",
+							Usage: "name of the upload",
+						},
+						cli.StringFlag{
 							Name:  "file",
 							Usage: "path to the file to upload",
 						},
@@ -426,7 +430,8 @@ func main() {
 						uploadType := c.String("type")
 						projectArn := c.String("project")
 						uploadFilePath := c.String("file")
-						uploadPut(svc, uploadFilePath, uploadType, projectArn)
+						uploadName := c.String("name")
+						uploadPut(svc, uploadFilePath, uploadType, projectArn, uploadName)
 					},
 				},
 				{
@@ -781,7 +786,7 @@ func uploadInfo(svc *devicefarm.DeviceFarm, uploadArn string) {
 }
 
 /* Upload a file */
-func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType string, projectArn string) {
+func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType string, projectArn string, uploadName string) {
 
 	// Read File
 	file, err := os.Open(uploadFilePath)
@@ -803,9 +808,12 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 	fileBytes := bytes.NewReader(buffer) // convert to io.ReadSeeker type
 
 	// Prepare upload
-	uploadFileBasename := path.Base(uploadFilePath)
+	if uploadName == "" {
+		uploadName = path.Base(uploadFilePath)
+	}
+
 	uploadReq := &devicefarm.CreateUploadInput{
-		Name:        aws.String(uploadFileBasename),
+		Name:        aws.String(uploadName),
 		ProjectARN:  aws.String(projectArn),
 		Type:        aws.String(uploadType),
 		ContentType: aws.String("application/octet-stream"),
