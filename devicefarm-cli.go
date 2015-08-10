@@ -331,7 +331,7 @@ func main() {
 				cli.StringFlag{
 					Name:   "app-type",
 					EnvVar: "DF_APP_TYPE",
-					Usage:  "path of the app file to be executed",
+					Usage:  "type of app [ANDROID_APP,IOS_APP]",
 				},
 				cli.StringFlag{
 					Name:   "test-file",
@@ -341,7 +341,8 @@ func main() {
 				cli.StringFlag{
 					Name:   "test-type",
 					EnvVar: "DF_TEST_TYPE",
-					Usage:  "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
+					//Usage:  "type of test [APPIUM_JAVA_JUNIT_TEST_PACKAGE, INSTRUMENTATION_TEST_PACKAGE, UIAUTOMATION_TEST_PACKAGE, APPIUM_JAVA_TESTNG_TEST_PACKAGE, IOS_APP, CALABASH_TEST_PACKAGE, ANDROID_APP, UIAUTOMATOR_TEST_PACKAGE, XCTEST_TEST_PACKAGE, EXTERNAL_DATA]",
+					Usage: "type of test [UIAUTOMATOR, CALABASH, APPIUM_JAVA_TESTNG, UIAUTOMATION, BUILTIN_FUZZ, INSTRUMENTATION, APPIUM_JAVA_JUNIT, BUILTIN_EXPLORER, XCTEST]",
 				},
 				cli.StringFlag{
 					Name:   "test",
@@ -363,9 +364,9 @@ func main() {
 				appFile := c.String("app-file")
 				appType := c.String("app-type")
 				testPackageArn := c.String("test-package")
-				testPackageType := c.String("test-package-type")
-				testPackageFile := c.String("test-package-file")
-				scheduleRun(svc, projectArn, runName, deviceArn, devicePoolArn, appArn, appFile, appType, testPackageArn, testPackageType, testPackageFile)
+				testPackageType := c.String("test-type")
+				testPackageFile := c.String("test-file")
+				scheduleRun(svc, projectArn, runName, deviceArn, devicePoolArn, appArn, appFile, appType, testPackageArn, testPackageFile, testPackageType)
 			},
 		},
 		{
@@ -578,21 +579,7 @@ func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 }
 
 /* Schedule Run */
-func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageType string, testPackageFile string) {
-
-	runTest := &devicefarm.ScheduleRunTest{
-		Type: aws.String(testPackageType),
-		//Parameters: // test parameters
-		//Filter: // filter to pass to tests
-	}
-
-	if testPackageArn != "" {
-		runTest.TestPackageARN = aws.String(testPackageArn)
-	}
-
-	if testPackageFile != "" {
-		//runTest.TestPackageARN = aws.String(testPackageArn)
-	}
+func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageFile string, testPackageType string) {
 
 	if appFile != "" {
 		uploadApp, err := uploadPut(svc, appFile, appType, projectArn, "")
@@ -601,10 +588,34 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 	}
 
 	if testPackageFile != "" {
-		uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
+		uploadTestPackage, err := uploadPut(svc, testPackageFile, "CALABASH_TEST_PACKAGE", projectArn, "")
+		//uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
 		failOnErr(err, "error scheduling run")
 		testPackageArn = *uploadTestPackage.ARN
 	}
+
+	runTest := &devicefarm.ScheduleRunTest{
+		Type:           aws.String(testPackageType),
+		TestPackageARN: aws.String(testPackageArn),
+		//Parameters: // test parameters
+		//Filter: // filter to pass to tests
+	}
+
+	fmt.Println(appArn)
+	fmt.Println(devicePoolArn)
+	fmt.Println(runName)
+	fmt.Println(testPackageArn)
+	fmt.Println(testPackageType)
+	fmt.Println(projectArn)
+	/*
+		if testPackageArn != "" {
+			runTest.TestPackageARN = aws.String(testPackageArn)
+		}
+	*/
+
+	// Wait for the uploads to be processed
+	// Better is to check the upload status PROCESSING
+	time.Sleep(4 * time.Second)
 
 	runReq := &devicefarm.ScheduleRunInput{
 		AppARN:        aws.String(appArn),
@@ -614,12 +625,31 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 		Test:          runTest,
 	}
 
+	fmt.Println(awsutil.Prettify(runReq))
+
 	resp, err := svc.ScheduleRun(runReq)
 
 	failOnErr(err, "error scheduling run")
 	fmt.Println(awsutil.Prettify(resp))
 
-	// waiting for status of run to go COMPLETED
+	// Now we wait for the run status to go COMPLETED
+	runArn := *resp.Run.ARN
+
+	status := ""
+	for status != "COMPLETED" {
+		time.Sleep(4 * time.Second)
+		infoReq := &devicefarm.GetRunInput{
+			ARN: aws.String(runArn),
+		}
+
+		fmt.Print(".")
+		resp, err := svc.GetRun(infoReq)
+		failOnErr(err, "error scheduling run")
+		status = *resp.Run.Status
+	}
+
+	// Generate report
+	runReport(svc, runArn)
 
 }
 
