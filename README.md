@@ -17,7 +17,19 @@ Cleanup will happen soon!
 
 # Usage
 
+## Configuring access to AWS
+- You'll need to sign up with AWS and create an account.
+- This app uses the standard AWS tool configuration. It either reads from ~/.aws/config.
+
+Set:
+```
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+```
+
 ## Listing projects
+Note: currently projects need to be create via the console
+
 ```
 $ ./devicefarm-cli list projects
 +----------+-------------------------------+----------------------------------------------------------------------------------------+
@@ -91,6 +103,10 @@ $ ./devicefarm-cli list runs
 ```
 
 ## Schedule run
+- To schedule a run use the following syntax (soon it will even be simpler).
+- You can also set params through environment variables with `DF_` prefix
+- Currently only tested with CALABASH tests
+
 ```
 NAME:
    schedule - schedule a run
@@ -112,6 +128,8 @@ OPTIONS:
 ```
 
 ## Report
+Report will download the results (artifacts) in a standard structure (html format will be improved soon)
+
 ```
 $ ./devicefarm-cli report --run <run-arn>
 report/
