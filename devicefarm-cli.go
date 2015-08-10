@@ -573,7 +573,19 @@ func listRuns(svc *devicefarm.DeviceFarm, projectArn string) {
 	resp, err := svc.ListRuns(listReq)
 
 	failOnErr(err, "error listing runs")
-	fmt.Println(awsutil.Prettify(resp))
+	//fmt.Println(awsutil.Prettify(resp))
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Platform", "Type", "Result", "Status", "Date", "ARN"})
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetColWidth(50)
+
+	for _, m := range resp.Runs {
+		line := []string{*m.Name, *m.Platform, *m.Type, *m.Result, *m.Status, time.Time.String(*m.Created), *m.ARN}
+		table.Append(line)
+	}
+	table.Render() // Send output
+
 }
 
 /* List all tests */
