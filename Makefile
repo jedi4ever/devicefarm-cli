@@ -4,6 +4,7 @@ build:
 install:
 	GOPATH=~/go PATH=\"$(PATH)\":~/go/bin go get github.com/codegangsta/cli
 	GOPATH=~/go PATH=\"$(PATH)\":~/go/bin go get github.com/aws/aws-sdk-go/service/devicefarm
+	GOPATH=~/go PATH=\"$(PATH)\":~/go/bin go get github.com/olekukonko/tablewriter
 
 gox:
 	PATH=\"$(PATH)\":~/go/bin gox -output "dist/devicefarm-cli_0_0_2_{{.OS}}_{{.Arch}}"

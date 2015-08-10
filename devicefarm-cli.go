@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/service/devicefarm"
 	"github.com/codegangsta/cli"
+	"github.com/olekukonko/tablewriter"
 	"io"
 	"log"
 	"net/http"
@@ -510,7 +511,43 @@ func listDevices(svc *devicefarm.DeviceFarm) {
 	resp, err := svc.ListDevices(input)
 
 	failOnErr(err, "error listing devices")
-	fmt.Println(awsutil.Prettify(resp))
+	//fmt.Println(awsutil.Prettify(resp))
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Os", "Platform", "Form", "ARN"})
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetColWidth(50)
+
+	for _, m := range resp.Devices {
+		line := []string{*m.Name, *m.Os, *m.Platform, *m.FormFactor, *m.ARN}
+		table.Append(line)
+	}
+	table.Render() // Send output
+
+	/*
+	   	    {
+	         ARN: "arn:aws:devicefarm:us-west-2::device:A0E6E6E1059E45918208DF75B2B7EF6C",
+	         CPU: {
+	           Architecture: "ARMv7",
+	           Clock: 2265,
+	           Frequency: "MHz"
+	         },
+	         FormFactor: "PHONE",
+	         HeapSize: 0,
+	         Image: "NA",
+	         Manufacturer: "LG",
+	         Memory: 17179869184,
+	         Model: "G2",
+	         Name: "LG G2 (Sprint)",
+	         Os: "4.2.2",
+	         Platform: "ANDROID",
+	         Resolution: {
+	           Height: 1920,
+	           Width: 1080
+	         }
+	       }
+	*/
+
 }
 
 /* List all uploads */
