@@ -6,3 +6,4 @@ devicefarm-cli
 ENV.sh
 dist/
 reports/
+.DS_Store
