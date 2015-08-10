@@ -2,6 +2,8 @@
 
 > A Command-Line interface to AWS Devicefarm , because humans don't use ARNs. Written in golang for maximum deployability
 
+** If you find this app useful, consider sponsoring the AWS costs for doing test runs, devicefarm ain't cheapo (open a ticket and let me know) **
+
 Current State: 
 - usable but no good err checking and output
 
