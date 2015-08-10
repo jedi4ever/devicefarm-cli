@@ -314,13 +314,34 @@ func main() {
 					Usage:  "devicepool arn or devicepool name",
 				},
 				cli.StringFlag{
+					Name:   "device",
+					EnvVar: "DF_DEVICE",
+					Usage:  "device arn or devicepool name to run the test on",
+				},
+				cli.StringFlag{
 					Name:   "name",
 					EnvVar: "DF_RUN_NAME",
 					Usage:  "name to give to the run that is scheduled",
 				},
 				cli.StringFlag{
-					Name:  "test-type",
-					Usage: "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
+					Name:   "app-file",
+					EnvVar: "DF_APP_FILE",
+					Usage:  "path of the app file to be executed",
+				},
+				cli.StringFlag{
+					Name:   "app-type",
+					EnvVar: "DF_APP_TYPE",
+					Usage:  "path of the app file to be executed",
+				},
+				cli.StringFlag{
+					Name:   "test-file",
+					EnvVar: "DF_TEST_FILE",
+					Usage:  "path of the test file to be executed",
+				},
+				cli.StringFlag{
+					Name:   "test-type",
+					EnvVar: "DF_TEST_TYPE",
+					Usage:  "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
 				},
 				cli.StringFlag{
 					Name:   "test",
@@ -335,12 +356,16 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				projectArn := c.String("project")
-				appUploadArn := c.String("app")
 				runName := c.String("name")
+				deviceArn := c.String("device")
 				devicePoolArn := c.String("device-pool")
-				testUploadArn := c.String("test")
-				testType := c.String("test-type")
-				scheduleRun(svc, runName, projectArn, appUploadArn, devicePoolArn, testUploadArn, testType)
+				appArn := c.String("app")
+				appFile := c.String("app-file")
+				appType := c.String("app-type")
+				testPackageArn := c.String("test-package")
+				testPackageType := c.String("test-package-type")
+				testPackageFile := c.String("test-package-file")
+				scheduleRun(svc, projectArn, runName, deviceArn, devicePoolArn, appArn, appFile, appType, testPackageArn, testPackageType, testPackageFile)
 			},
 		},
 		{
@@ -553,20 +578,36 @@ func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 }
 
 /* Schedule Run */
-func scheduleRun(svc *devicefarm.DeviceFarm, runName string, projectArn string, appUploadArn string, devicePoolArn string, testUploadArn string, testType string) {
+func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageType string, testPackageFile string) {
 
 	runTest := &devicefarm.ScheduleRunTest{
-		Type: aws.String(testType),
+		Type: aws.String(testPackageType),
 		//Parameters: // test parameters
 		//Filter: // filter to pass to tests
 	}
 
-	if testUploadArn != "" {
-		runTest.TestPackageARN = aws.String(testUploadArn)
+	if testPackageArn != "" {
+		runTest.TestPackageARN = aws.String(testPackageArn)
+	}
+
+	if testPackageFile != "" {
+		//runTest.TestPackageARN = aws.String(testPackageArn)
+	}
+
+	if appFile != "" {
+		uploadApp, err := uploadPut(svc, appFile, appType, projectArn, "")
+		failOnErr(err, "error scheduling run")
+		appArn = *uploadApp.ARN
+	}
+
+	if testPackageFile != "" {
+		uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
+		failOnErr(err, "error scheduling run")
+		testPackageArn = *uploadTestPackage.ARN
 	}
 
 	runReq := &devicefarm.ScheduleRunInput{
-		AppARN:        aws.String(appUploadArn),
+		AppARN:        aws.String(appArn),
 		DevicePoolARN: aws.String(devicePoolArn),
 		Name:          aws.String(runName),
 		ProjectARN:    aws.String(projectArn),
@@ -577,6 +618,9 @@ func scheduleRun(svc *devicefarm.DeviceFarm, runName string, projectArn string, 
 
 	failOnErr(err, "error scheduling run")
 	fmt.Println(awsutil.Prettify(resp))
+
+	// waiting for status of run to go COMPLETED
+
 }
 
 /* List Artifacts */
@@ -886,14 +930,14 @@ func uploadInfo(svc *devicefarm.DeviceFarm, uploadArn string) {
 }
 
 /* Upload a file */
-func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType string, projectArn string, uploadName string) {
+func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType string, projectArn string, uploadName string) (upload *devicefarm.Upload, err error) {
 
 	// Read File
 	file, err := os.Open(uploadFilePath)
 
 	if err != nil {
+		return nil, err
 		fmt.Println(err)
-		os.Exit(1)
 	}
 
 	defer file.Close()
@@ -919,10 +963,16 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 		ContentType: aws.String("application/octet-stream"),
 	}
 
-	resp, err := svc.CreateUpload(uploadReq)
-	fmt.Println(awsutil.Prettify(resp))
+	uploadResp, err := svc.CreateUpload(uploadReq)
 
-	uploadInfo := resp.Upload
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	fmt.Println(awsutil.Prettify(uploadResp))
+
+	uploadInfo := uploadResp.Upload
 
 	upload_url := *uploadInfo.URL
 
@@ -932,6 +982,7 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 
 	// Remove Host and split to get [0] = path & [1] = querystring
@@ -954,9 +1005,11 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 
+	return uploadResp.Upload, nil
 }
 
 /*
