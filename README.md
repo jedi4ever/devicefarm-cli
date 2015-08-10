@@ -30,25 +30,24 @@ USAGE:
 VERSION:
    0.0.1
 
-AUTHOR(S):
-
+AUTHOR(S): 
+   Patrick Debois <Patrick.Debois@jedi.be> 
+   
 COMMANDS:
-   projects     manage the projects
-   artifacts    manage the artifacts
-   devicepools  manage the device pools
-   devices      manage the devices
-   jobs         manage the jobs
-   runs         manage the runs
-   samples      manage the samples
-   suites       manage the suites
-   tests        manage the tests
-   problems     manage the problems
-   upload       manages the uploads
-   help, h      Shows a list of commands or help for one command
-
+   list   list various elements on devicefarm
+   download download various devicefarm elements
+   status get the status of a run
+   report get report about a run
+   schedule schedule a run
+   create creates various devicefarm elements
+   info   get detailed info about various devicefarm elements
+   upload uploads an app, test and data
+   help, h  Shows a list of commands or help for one command
+   
 GLOBAL OPTIONS:
-   --help, -h           show help
-   --version, -v        print the version
+   --help, -h   show help
+   --version, -v  print the version
+   
 
 ```
 
