@@ -57,23 +57,12 @@ GLOBAL OPTIONS:
 - The user on aws it runs under is called 'rwx'
 - Files are kept for 30days around
 - You can not delete/update devicepools
+
 - The docs are confusing at best: many calls specify that you need an ARN . for example List Artificats you need to specify an Artifact ARN, this is wrong and needs to be the Run ARN
 - The doc use of ..Arn.. in params is not consistent with the golang where the param in the struct is often ARN (uppercase)
 - the extention of test results is inconsistent: sometimes it's 'xml' 'json' but '.png' (with the dot in the extension)
 - listArtifacts API doc is incorrect: for the type you can only specify "LOG", "FILE", "SCREENSHOT"
-- listArtificats doesn't take the options Name & Extension to filter on specific one
-- Pi found in the api of certain devices 
-
-```
-API Result #aws #devicefarm :
-
-       CPU: {
-         Architecture: "foo",
-         Clock: 3.14159,
-         Frequency: "foo"
-       },
-```
-
+- listArtifacts doesn't take the options Name & Extension to filter on specific one
 
 - The test devices sometimes suffer from a DNS server not responding
 - Be sure to crank up the timeouts in your test as devices can be slow

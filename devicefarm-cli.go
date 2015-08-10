@@ -42,7 +42,6 @@ func main() {
 					Name:  "projects",
 					Usage: "list the projects", // of an account
 					Action: func(c *cli.Context) {
-						fmt.Println(c.Args())
 						listProjects(svc)
 					},
 				},
@@ -487,7 +486,17 @@ func listProjects(svc *devicefarm.DeviceFarm) {
 	resp, err := svc.ListProjects(nil)
 	failOnErr(err, "error listing projects")
 
-	fmt.Println(awsutil.Prettify(resp))
+	//fmt.Println(awsutil.Prettify(resp))
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Created", "ARN"})
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetColWidth(50)
+
+	for _, m := range resp.Projects {
+		line := []string{*m.Name, time.Time.String(*m.Created), *m.ARN}
+		table.Append(line)
+	}
+	table.Render() // Send output
 }
 
 /* List all DevicePools */
@@ -624,7 +633,19 @@ func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 	resp, err := svc.ListSuites(listReq)
 
 	failOnErr(err, "error listing suites")
-	fmt.Println(awsutil.Prettify(resp))
+	//fmt.Println(awsutil.Prettify(resp))
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Status", "Result", "Message"})
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetColWidth(120)
+
+	for _, m := range resp.Suites {
+		line := []string{*m.Name, *m.Status, *m.Result, *m.Message}
+		table.Append(line)
+	}
+	table.Render() // Send output
+
 }
 
 /* Schedule Run */
