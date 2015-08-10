@@ -6,4 +6,4 @@ install:
 	GOPATH=~/go PATH=\"$(PATH)\":~/go/bin go get github.com/aws/aws-sdk-go/service/devicefarm
 
 gox:
-	PATH=\"$(PATH)\":~/go/bin gox -output dist
+	PATH=\"$(PATH)\":~/go/bin gox -output "dist/devicefarm-cli_0_0_2_{{.OS}}_{{.Arch}}"

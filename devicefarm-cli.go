@@ -34,25 +34,65 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
-			Name:  "projects",
-			Usage: "manage the projects",
+			Name:  "list",
+			Usage: "list various elements on devicefarm",
 			Subcommands: []cli.Command{
 				{
-					Name:  "list",
+					Name:  "projects",
 					Usage: "list the projects", // of an account
 					Action: func(c *cli.Context) {
 						fmt.Println(c.Args())
 						listProjects(svc)
 					},
 				},
-			},
-		},
-		{
-			Name:  "artifacts",
-			Usage: "manage the artifacts",
-			Subcommands: []cli.Command{
 				{
-					Name:  "list",
+					Name:  "devices",
+					Usage: "list the devices", // globally
+					Action: func(c *cli.Context) {
+						listDevices(svc)
+					},
+				},
+				{
+					Name:  "samples",
+					Usage: "list the samples",
+					Action: func(c *cli.Context) {
+						// Not yet implemented
+						// listSamples()
+					},
+				},
+				{
+					Name:  "jobs",
+					Usage: "list the jobs", // of a test
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+
+						listJobs(svc, runArn)
+					},
+				},
+				{
+					Name:  "uploads",
+					Usage: "lists all uploads", // of a Project
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						projectArn := c.String("project")
+						listUploads(svc, projectArn)
+					},
+				},
+				{
+					Name:  "artifacts",
 					Usage: "list the artifacts", // of a test
 					Flags: []cli.Flag{
 						cli.StringFlag{
@@ -87,7 +127,113 @@ func main() {
 					},
 				},
 				{
-					Name:  "download",
+					Name:  "suites",
+					Usage: "list the suites",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						jobArn := c.String("job")
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+						listSuites(svc, filterArn)
+					},
+				},
+				{
+					Name:  "devicepools",
+					Usage: "list the devicepools", //globally
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+					},
+					Action: func(c *cli.Context) {
+
+						projectArn := c.String("project")
+						listDevicePools(svc, projectArn)
+					},
+				},
+				{
+					Name: "problems",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Usage: "list the problems", // of Test
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						listUniqueProblems(svc, runArn)
+					},
+				},
+				{
+					Name:  "tests",
+					Usage: "list the tests", // of a Run
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+						cli.StringFlag{
+							Name:   "job",
+							EnvVar: "DF_JOB",
+							Usage:  "job arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						jobArn := c.String("job")
+						filterArn := ""
+						if runArn != "" {
+							filterArn = runArn
+						} else {
+							filterArn = jobArn
+						}
+						listTests(svc, filterArn)
+					},
+				},
+				{
+					Name:  "runs",
+					Usage: "list the runs",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						projectArn := c.String("project")
+						listRuns(svc, projectArn)
+					},
+				},
+			},
+		},
+		{
+			Name:  "download",
+			Usage: "download various devicefarm elements",
+			Subcommands: []cli.Command{
+				{
+					Name:  "artifacts",
 					Usage: "download the artifacts",
 					Flags: []cli.Flag{
 						cli.StringFlag{
@@ -124,279 +270,85 @@ func main() {
 			},
 		},
 		{
-			Name:  "devicepools",
-			Usage: "manage the device pools",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the devicepools", //globally
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "project",
-							EnvVar: "DF_PROJECT",
-							Usage:  "project arn or project description",
-						},
-					},
-					Action: func(c *cli.Context) {
-
-						projectArn := c.String("project")
-						listDevicePools(svc, projectArn)
-					},
+			Name:  "status",
+			Usage: "get the status of a run",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "run",
+					EnvVar: "DF_RUN",
+					Usage:  "run arn or run description",
 				},
+			},
+			Action: func(c *cli.Context) {
+				runArn := c.String("run")
+				runStatus(svc, runArn)
 			},
 		},
 		{
-			Name:  "devices",
-			Usage: "manage the devices",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the devices", // globally
-					Action: func(c *cli.Context) {
-						listDevices(svc)
-					},
+			Name:  "report",
+			Usage: "get report about a run",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "run",
+					EnvVar: "DF_RUN",
+					Usage:  "run arn or run description",
 				},
+			},
+			Action: func(c *cli.Context) {
+				runArn := c.String("run")
+				runReport(svc, runArn)
 			},
 		},
 		{
-			Name:  "jobs",
-			Usage: "manage the jobs",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the jobs", // of a test
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-
-						listJobs(svc, runArn)
-					},
+			Name:  "schedule",
+			Usage: "schedule a run",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "project",
+					EnvVar: "DF_PROJECT",
+					Usage:  "project arn or project description",
 				},
+				cli.StringFlag{
+					Name:   "device-pool",
+					EnvVar: "DF_DEVICE_POOL",
+					Usage:  "devicepool arn or devicepool name",
+				},
+				cli.StringFlag{
+					Name:   "name",
+					EnvVar: "DF_RUN_NAME",
+					Usage:  "name to give to the run that is scheduled",
+				},
+				cli.StringFlag{
+					Name:  "test-type",
+					Usage: "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
+				},
+				cli.StringFlag{
+					Name:   "test",
+					Usage:  "arn or name of the test upload to schedule",
+					EnvVar: "DF_TEST",
+				},
+				cli.StringFlag{
+					Name:   "app",
+					Usage:  "arn or name of the app upload to schedule",
+					EnvVar: "DF_APP",
+				},
+			},
+			Action: func(c *cli.Context) {
+				projectArn := c.String("project")
+				appUploadArn := c.String("app")
+				runName := c.String("name")
+				devicePoolArn := c.String("device-pool")
+				testUploadArn := c.String("test")
+				testType := c.String("test-type")
+				scheduleRun(svc, runName, projectArn, appUploadArn, devicePoolArn, testUploadArn, testType)
 			},
 		},
 		{
-			Name:  "run",
-			Usage: "manage the runs",
+			Name:  "create",
+			Usage: "creates various devicefarm elements",
 			Subcommands: []cli.Command{
 				{
-					Name:  "list",
-					Usage: "list the runs",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "project",
-							EnvVar: "DF_PROJECT",
-							Usage:  "project arn or project description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						projectArn := c.String("project")
-						listRuns(svc, projectArn)
-					},
-				},
-				{
-					Name:  "info",
-					Usage: "get info about a run",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						runInfo(svc, runArn)
-					},
-				},
-				{
-					Name:  "report",
-					Usage: "get report about a run",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						runReport(svc, runArn)
-					},
-				},
-				{
-					Name:  "status",
-					Usage: "get status of run",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						runStatus(svc, runArn)
-					},
-				},
-				{
-					Name:  "schedule",
-					Usage: "schedule a run",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "project",
-							EnvVar: "DF_PROJECT",
-							Usage:  "project arn or project description",
-						},
-						cli.StringFlag{
-							Name:   "device-pool",
-							EnvVar: "DF_DEVICE_POOL",
-							Usage:  "devicepool arn or devicepool name",
-						},
-						cli.StringFlag{
-							Name:   "name",
-							EnvVar: "DF_RUN_NAME",
-							Usage:  "name to give to the run that is scheduled",
-						},
-						cli.StringFlag{
-							Name:  "test-type",
-							Usage: "type of test [BUILTIN_FUZZ,BUILTIN_EXPLORER,APPIUM_JAVA_JUNIT,APPIUM_JAVA_TESTNG,CALABASH,INSTRUMENTATION,UIAUTOMATION,UIAUTOMATOR,XCTEST]",
-						},
-						cli.StringFlag{
-							Name:   "test",
-							Usage:  "arn or name of the test upload to schedule",
-							EnvVar: "DF_TEST",
-						},
-						cli.StringFlag{
-							Name:   "app",
-							Usage:  "arn or name of the app upload to schedule",
-							EnvVar: "DF_APP",
-						},
-					},
-					Action: func(c *cli.Context) {
-						projectArn := c.String("project")
-						appUploadArn := c.String("app")
-						runName := c.String("name")
-						devicePoolArn := c.String("device-pool")
-						testUploadArn := c.String("test")
-						testType := c.String("test-type")
-						scheduleRun(svc, runName, projectArn, appUploadArn, devicePoolArn, testUploadArn, testType)
-					},
-				},
-			},
-		},
-		{
-			Name:  "samples",
-			Usage: "manage the samples",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the samples",
-					Action: func(c *cli.Context) {
-						// Not yet implemented
-						// listSamples()
-					},
-				},
-			},
-		},
-		{
-			Name:  "suites",
-			Usage: "manage the suites",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the suites",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-						cli.StringFlag{
-							Name:   "job",
-							EnvVar: "DF_JOB",
-							Usage:  "job arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						jobArn := c.String("job")
-						filterArn := ""
-						if runArn != "" {
-							filterArn = runArn
-						} else {
-							filterArn = jobArn
-						}
-						listSuites(svc, filterArn)
-					},
-				},
-			},
-		},
-		{
-			Name:  "tests",
-			Usage: "manage the tests",
-			Subcommands: []cli.Command{
-				{
-					Name:  "list",
-					Usage: "list the tests", // of a Run
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-						cli.StringFlag{
-							Name:   "job",
-							EnvVar: "DF_JOB",
-							Usage:  "job arn or run description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						jobArn := c.String("job")
-						filterArn := ""
-						if runArn != "" {
-							filterArn = runArn
-						} else {
-							filterArn = jobArn
-						}
-						listTests(svc, filterArn)
-					},
-				},
-			},
-		},
-		{
-			Name:  "problems",
-			Usage: "manage the problems",
-			Subcommands: []cli.Command{
-				{
-					Name: "list",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "run",
-							EnvVar: "DF_RUN",
-							Usage:  "run arn or run description",
-						},
-					},
-					Usage: "list the problems", // of Test
-					Action: func(c *cli.Context) {
-						runArn := c.String("run")
-						listUniqueProblems(svc, runArn)
-					},
-				},
-			},
-		},
-		{
-			Name:  "upload",
-			Usage: "manages the uploads",
-			Subcommands: []cli.Command{
-				{
-					Name:  "create",
+					Name:  "upload",
 					Usage: "creates an upload",
 					Flags: []cli.Flag{
 						cli.StringFlag{
@@ -420,6 +372,48 @@ func main() {
 						uploadCreate(svc, uploadName, uploadType, projectArn)
 					},
 				},
+			},
+		},
+		{
+			Name:  "info",
+			Usage: "get detailed info about various devicefarm elements",
+			Subcommands: []cli.Command{
+				{
+					Name:  "run",
+					Usage: "get info about a run",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "run",
+							EnvVar: "DF_RUN",
+							Usage:  "run arn or run description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						runArn := c.String("run")
+						runInfo(svc, runArn)
+					},
+				},
+				{
+					Name:  "upload",
+					Usage: "info about uploads",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "upload",
+							EnvVar: "DF_UPLOAD",
+							Usage:  "upload arn or description",
+						},
+					},
+					Action: func(c *cli.Context) {
+						uploadArn := c.String("upload")
+						uploadInfo(svc, uploadArn)
+					},
+				},
+			},
+		},
+		{
+			Name:  "upload",
+			Usage: "uploads an app, test and data",
+			Subcommands: []cli.Command{
 				{
 					Name:  "file",
 					Usage: "uploads an file",
@@ -448,36 +442,6 @@ func main() {
 						uploadFilePath := c.String("file")
 						uploadName := c.String("name")
 						uploadPut(svc, uploadFilePath, uploadType, projectArn, uploadName)
-					},
-				},
-				{
-					Name:  "list",
-					Usage: "lists all uploads", // of a Project
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "project",
-							EnvVar: "DF_PROJECT",
-							Usage:  "project arn or project description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						projectArn := c.String("project")
-						listUploads(svc, projectArn)
-					},
-				},
-				{
-					Name:  "info",
-					Usage: "info about uploads",
-					Flags: []cli.Flag{
-						cli.StringFlag{
-							Name:   "upload",
-							EnvVar: "DF_UPLOAD",
-							Usage:  "upload arn or description",
-						},
-					},
-					Action: func(c *cli.Context) {
-						uploadArn := c.String("upload")
-						uploadInfo(svc, uploadArn)
 					},
 				},
 			},
