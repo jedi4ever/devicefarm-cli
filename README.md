@@ -107,10 +107,9 @@ $ ./devicefarm-cli list runs
 ## Schedule run
 - To schedule a run use the following syntax (soon it will even be simpler).
 - You can also set params through environment variables with `DF_` prefix
-- Currently only tested with CALABASH tests
 
 ```
-$ ./devicefarm-cli schedule
+$ ./devicefarm-cli schedule --project <project-arn> --device-pool <device-pool-arn> --app-file app-samplejr-staging-release.apk --test-file calabash_tests.zip --name "A new test, a new hope"
 - Uploading app-file app-samplejr-staging-release.apk of type ANDROID_APP .
 - Uploading test-file calabash_tests.zip of type CALABASH_TEST_PACKAGE.
 - Initiating test run
