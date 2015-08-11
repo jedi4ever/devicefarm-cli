@@ -469,7 +469,8 @@ func main() {
 						projectArn := c.String("project")
 						uploadFilePath := c.String("file")
 						uploadName := c.String("name")
-						uploadPut(svc, uploadFilePath, uploadType, projectArn, uploadName)
+						_, err := uploadPut(svc, uploadFilePath, uploadType, projectArn, uploadName)
+						failOnErr(err, "error Uploading file")
 					},
 				},
 			},
@@ -705,18 +706,31 @@ func lookupTestPackageType(testType string) (testPackageType string, err error) 
 }
 
 /* Schedule Run */
-func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageFile string, testType string) {
+func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageFile string, testType string) (scheduleError error) {
 
+	debug := false
 	// Upload the app file if there is one
 	if appFile != "" {
-		uploadApp, err := uploadPut(svc, appFile, appType, projectArn, "")
 
 		// Try to guess the upload type based on the filename
 		if appType == "" {
-			appType, err = guessAppType(appFile)
+			guessedType, err := guessAppType(appFile)
+			appType = guessedType
+
+			if err != nil {
+				return err
+			}
 		}
 
-		failOnErr(err, "error scheduling run")
+		// Upload appFile with correct AppType
+		fmt.Printf("- Uploading app-file %s of type %s ", appFile, appType)
+
+		uploadApp, err := uploadPut(svc, appFile, appType, projectArn, "")
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("\n")
 		appArn = *uploadApp.ARN
 	}
 
@@ -728,13 +742,21 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 	*/
 
 	testPackageType, err := lookupTestPackageType(testType)
+	if err != nil {
+		return err
+	}
 
 	// Upload the testPackage file if there is one
 	if testPackageFile != "" {
 
+		fmt.Printf("- Uploading test-file %s of type %s", testPackageFile, testPackageType)
+
 		uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
-		failOnErr(err, "error scheduling run")
+		if err != nil {
+			return err
+		}
 		testPackageArn = *uploadTestPackage.ARN
+		fmt.Printf("\n")
 	}
 
 	runTest := &devicefarm.ScheduleRunTest{
@@ -744,21 +766,14 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 		//Filter: // filter to pass to tests
 	}
 
-	fmt.Println(appArn)
-	fmt.Println(devicePoolArn)
-	fmt.Println(runName)
-	fmt.Println(testPackageArn)
-	fmt.Println(testPackageType)
-	fmt.Println(projectArn)
-	/*
-		if testPackageArn != "" {
-			runTest.TestPackageARN = aws.String(testPackageArn)
-		}
-	*/
-
-	// Wait for the uploads to be processed
-	// Better is to check the upload status PROCESSING
-	time.Sleep(4 * time.Second)
+	if debug {
+		fmt.Println(appArn)
+		fmt.Println(devicePoolArn)
+		fmt.Println(runName)
+		fmt.Println(testPackageArn)
+		fmt.Println(testPackageType)
+		fmt.Println(projectArn)
+	}
 
 	runReq := &devicefarm.ScheduleRunInput{
 		AppARN:        aws.String(appArn),
@@ -768,14 +783,22 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 		Test:          runTest,
 	}
 
-	fmt.Println(awsutil.Prettify(runReq))
+	if debug {
+		fmt.Println(awsutil.Prettify(runReq))
+	}
+
+	fmt.Println("- Initiating test run")
 
 	resp, err := svc.ScheduleRun(runReq)
+	if err != nil {
+		return err
+	}
 
-	failOnErr(err, "error scheduling run")
-	fmt.Println(awsutil.Prettify(resp))
+	//fmt.Println(awsutil.Prettify(resp))
 
 	// Now we wait for the run status to go COMPLETED
+	fmt.Print("- Waiting until the tests complete ")
+
 	runArn := *resp.Run.ARN
 
 	status := ""
@@ -787,12 +810,18 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 
 		fmt.Print(".")
 		resp, err := svc.GetRun(infoReq)
-		failOnErr(err, "error scheduling run")
+
+		if err != nil {
+			return err
+		}
 		status = *resp.Run.Status
 	}
 
 	// Generate report
+	fmt.Println("\n- Generating report ")
 	runReport(svc, runArn)
+
+	return nil
 
 }
 
@@ -861,7 +890,7 @@ func downloadArtifact(fileName string, artifact *devicefarm.Artifact) {
 		panic(err)
 	}
 
-	fmt.Printf("Downloading [%s] -> [%s]\n", url, fileName)
+	//fmt.Printf("Downloading [%s] -> [%s]\n", url, fileName)
 
 	downloadURL(url, fileName)
 }
@@ -892,13 +921,16 @@ func downloadURL(url string, fileName string) {
 	defer resp.Body.Close()
 	fmt.Println(resp.Status)
 
-	size, err := io.Copy(file, resp.Body)
+	debug := false
+	if debug {
+		size, err := io.Copy(file, resp.Body)
 
-	if err != nil {
-		panic(err)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("%s with %v bytes downloaded", fileName, size)
 	}
-
-	fmt.Printf("%s with %v bytes downloaded", fileName, size)
 
 }
 
@@ -953,7 +985,8 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 	resp, err := svc.GetRun(infoReq)
 
 	failOnErr(err, "error getting run info")
-	fmt.Printf("%s\n", *resp.Run.Name)
+
+	fmt.Printf("Reporting on run %s\n", *resp.Run.Name)
 	//fmt.Println(awsutil.Prettify(resp))
 
 	jobReq := &devicefarm.ListJobsInput{
@@ -977,19 +1010,15 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 
 		// Store type artifacts
 		artifacts[artifactType] = append(artifacts[artifactType], *artifactResp)
-		/*
-			for _, artifact := range artifactResp.Artifacts {
-				fmt.Println(awsutil.Prettify(artifact))
-			}
-		*/
 	}
 
 	respJob, err := svc.ListJobs(jobReq)
 	failOnErr(err, "error getting jobs")
 
+	// Find all jobs within this run
 	for _, job := range respJob.Jobs {
 
-		fmt.Println("==========================================")
+		//fmt.Println("==========================================")
 		time.Sleep(2 * time.Second)
 
 		jobFriendlyName := fmt.Sprintf("%s - %s - %s", *job.Name, *job.Device.Model, *job.Device.Os)
@@ -1008,7 +1037,10 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 				message = *suite.Message
 			}
 
-			fmt.Printf("%s -> %s : %s \n----> %s\n", jobFriendlyName, *suite.Name, message, *suite.ARN)
+			debug := false
+			if debug {
+				fmt.Printf("%s -> %s : %s \n----> %s\n", jobFriendlyName, *suite.Name, message, *suite.ARN)
+			}
 			dirPrefix := fmt.Sprintf("report/%s/%s/", jobFriendlyName, *suite.Name)
 			downloadArtifactsForSuite(dirPrefix, artifacts, *suite)
 		}
@@ -1105,6 +1137,8 @@ func uploadInfo(svc *devicefarm.DeviceFarm, uploadArn string) {
 /* Upload a file */
 func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType string, projectArn string, uploadName string) (upload *devicefarm.Upload, err error) {
 
+	debug := false
+
 	// Read File
 	file, err := os.Open(uploadFilePath)
 
@@ -1143,13 +1177,15 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 		return nil, err
 	}
 
-	fmt.Println(awsutil.Prettify(uploadResp))
-
 	uploadInfo := uploadResp.Upload
 
 	upload_url := *uploadInfo.URL
 
-	fmt.Println(upload_url)
+	if debug {
+		fmt.Println("- Upload Response result:")
+		fmt.Println(awsutil.Prettify(uploadResp))
+		fmt.Println(upload_url)
+	}
 
 	req, err := http.NewRequest("PUT", upload_url, fileBytes)
 
@@ -1167,20 +1203,44 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 	req.Header.Add("Content-Length", strconv.FormatInt(fileSize, 10))
 
 	// Debug Request to AWS
-	debug(httputil.DumpRequestOut(req, false))
+	if debug {
+		fmt.Println("- HTTP Upload Request")
+		debugHTTP(httputil.DumpRequestOut(req, false))
+	}
 
 	client := &http.Client{}
 
 	res, err := client.Do(req)
 
-	dump, _ := httputil.DumpResponse(res, true)
-	log.Printf("} -> %s\n", dump)
+	if debug {
+		fmt.Println("- HTTP Upload Response")
+		dump, _ := httputil.DumpResponse(res, true)
+		log.Printf("} -> %s\n", dump)
+	}
 
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
 	}
+
 	defer res.Body.Close()
+
+	status := ""
+	for status != "SUCCEEDED" {
+		time.Sleep(4 * time.Second)
+		fmt.Print(".")
+		uploadReq := &devicefarm.GetUploadInput{
+			ARN: uploadInfo.ARN,
+		}
+
+		resp, err := svc.GetUpload(uploadReq)
+
+		if err != nil {
+			return nil, err
+		}
+
+		status = *resp.Upload.Status
+	}
 
 	return uploadResp.Upload, nil
 }
@@ -1197,7 +1257,7 @@ func failOnErr(err error, reason string) {
 	return
 }
 
-func debug(data []byte, err error) {
+func debugHTTP(data []byte, err error) {
 	if err == nil {
 		fmt.Printf("%s\n\n", data)
 	} else {
