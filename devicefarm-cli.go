@@ -749,7 +749,7 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 	// Upload the testPackage file if there is one
 	if testPackageFile != "" {
 
-		fmt.Printf("- Uploading test-file %s of type %s", testPackageFile, testPackageType)
+		fmt.Printf("- Uploading test-file %s of type %s ", testPackageFile, testPackageType)
 
 		uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
 		if err != nil {
@@ -856,7 +856,10 @@ func listArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactType st
 /* Download Artifacts */
 func downloadArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactType string) {
 
-	fmt.Println(filterArn)
+	debug := false
+	if debug {
+		fmt.Println(filterArn)
+	}
 
 	listReq := &devicefarm.ListArtifactsInput{
 		ARN: aws.String(filterArn),
@@ -871,7 +874,7 @@ func downloadArtifacts(svc *devicefarm.DeviceFarm, filterArn string, artifactTyp
 		failOnErr(err, "error listing artifacts")
 
 		for index, artifact := range resp.Artifacts {
-			fileName := fmt.Sprintf("report/%d-%s.%s", index, *artifact.Name, *artifact.Extension)
+			fileName := fmt.Sprintf("- report/%d-%s.%s", index, *artifact.Name, *artifact.Extension)
 			downloadArtifact(fileName, artifact)
 		}
 	}
@@ -919,10 +922,10 @@ func downloadURL(url string, fileName string) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	fmt.Println(resp.Status)
-
 	debug := false
+
 	if debug {
+		fmt.Println(resp.Status)
 		size, err := io.Copy(file, resp.Body)
 
 		if err != nil {
@@ -1063,7 +1066,6 @@ func downloadArtifactsForSuite(dirPrefix string, allArtifacts map[string][]devic
 			count := 0
 			for _, artifact := range artifactList.Artifacts {
 				if strings.HasPrefix(*artifact.ARN, artifactPrefix) {
-					fmt.Printf("[%s] %s.%s\n", artifactType, *artifact.Name, *artifact.Extension)
 					//pathFull := strings.Split(suiteArn, ":")[6]
 					//pathSuffix := strings.Split(pathFull, "/")
 					//runId := pathSuffix[0]
@@ -1072,7 +1074,8 @@ func downloadArtifactsForSuite(dirPrefix string, allArtifacts map[string][]devic
 					//artifactId := pathSuffix[3]
 					fileName := fmt.Sprintf("%s/%d_%s.%s", dirPrefix, count, *artifact.Name, *artifact.Extension)
 					//fileName := fmt.Sprintf("%s/%s/%s/%s.%s", dirPrefix, suiteId, artifactId, *artifact.Name, *artifact.Extension)
-					fmt.Printf("[%s] %s\n%s\n", artifactType, fileName, *artifact.URL)
+					fmt.Printf("- [%s] %s\n", artifactType, fileName)
+					//fmt.Printf("- [%s] %s.%s\n", artifactType, *artifact.Name, *artifact.Extension)
 					downloadArtifact(fileName, artifact)
 					count++
 				}
@@ -1227,8 +1230,8 @@ func uploadPut(svc *devicefarm.DeviceFarm, uploadFilePath string, uploadType str
 
 	status := ""
 	for status != "SUCCEEDED" {
-		time.Sleep(4 * time.Second)
 		fmt.Print(".")
+		time.Sleep(4 * time.Second)
 		uploadReq := &devicefarm.GetUploadInput{
 			ARN: uploadInfo.ARN,
 		}
