@@ -110,6 +110,28 @@ $ ./devicefarm-cli list runs
 - Currently only tested with CALABASH tests
 
 ```
+$ ./devicefarm-cli schedule
+- Uploading app-file app-samplejr-staging-release.apk of type ANDROID_APP .
+- Uploading test-file calabash_tests.zip of type CALABASH_TEST_PACKAGE.
+- Initiating test run
+- Waiting until the tests complete ..................................................................................
+- Generating report
+Reporting on run app-samplejr-staging-release.apk
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Setup Suite/0_Logcat.logcat
+- [SCREENSHOT] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/0_i_take_a_screenshot_0..png
+- [SCREENSHOT] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/1_i_take_a_screenshot_0..png
+- [SCREENSHOT] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/2_i_take_a_screenshot_0..png
+- [SCREENSHOT] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/3_i_take_a_screenshot_0..png
+- [SCREENSHOT] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/4_i_take_a_screenshot_0..png
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/0_Calabash Pretty Output.txt
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/1_Calabash Standard Output.txt
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/2_Calabash JUnit XML Output.xml
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/3_Calabash JSON Output.json
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Homepage feature/4_Logcat.logcat
+- [FILE] report/Samsung Nexus 10 (WiFi) - Nexus 10 - 4.2.2/Teardown Suite/0_Logcat.logcat
+```
+
+```
 NAME:
    schedule - schedule a run
 

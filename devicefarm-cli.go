@@ -1044,7 +1044,7 @@ func runReport(svc *devicefarm.DeviceFarm, runArn string) {
 			if debug {
 				fmt.Printf("%s -> %s : %s \n----> %s\n", jobFriendlyName, *suite.Name, message, *suite.ARN)
 			}
-			dirPrefix := fmt.Sprintf("report/%s/%s/", jobFriendlyName, *suite.Name)
+			dirPrefix := fmt.Sprintf("report/%s/%s", jobFriendlyName, *suite.Name)
 			downloadArtifactsForSuite(dirPrefix, artifacts, *suite)
 		}
 
