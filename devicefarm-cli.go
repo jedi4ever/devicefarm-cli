@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
@@ -14,6 +15,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -648,24 +650,95 @@ func listSuites(svc *devicefarm.DeviceFarm, filterArn string) {
 
 }
 
-/* Schedule Run */
-func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageFile string, testPackageType string) {
+func guessAppType(fileName string) (appType string, err error) {
 
+	lowerCaseFileName := strings.ToLower(fileName)
+
+	extension := filepath.Ext(lowerCaseFileName)
+
+	if extension == ".apk" {
+		return "ANDROID_APP", nil
+	}
+
+	if extension == ".ipa" {
+		return "IOS_APP", nil
+	}
+
+	return "", errors.New("Can't guess App Type")
+
+}
+
+func lookupTestPackageType(testType string) (testPackageType string, err error) {
+
+	if testType == "APPIUM_JAVA_JUNIT" {
+		return "APPIUM_JAVA_JUNIT_TEST_PACKAGE", nil
+	}
+
+	if testType == "INSTRUMENTATION" {
+		return "INSTRUMENTATION_TEST_PACKAGE", nil
+	}
+
+	if testType == "UIAUTOMATION" {
+		return "UIAUTOMATION_TEST_PACKAGE", nil
+	}
+
+	if testType == "APPIUM_JAVA_TESTNG" {
+		return "APPIUM_JAVA_TESTNG_TEST_PACKAGE", nil
+	}
+
+	if testType == "CALABASH" {
+		return "CALABASH_TEST_PACKAGE", nil
+	}
+
+	if testType == "UIAUTOMATER" {
+		return "UIAUTOMATER_TEST_PACKAGE", nil
+	}
+
+	if testType == "XCTEST" {
+		return "XCTEST_TEST_PACKAGE", nil
+	}
+
+	// BUILTIN_EXPLORER: For Android, an app explorer that will traverse an Android app, interacting with it and capturing screenshots at the same time.
+	// BUILTIN_FUZZ: The built-in fuzz type.
+	return "", errors.New("Could not guess test type, you can use the BUILTIN_FUZZ or BUILTIN_EXPLORER")
+
+}
+
+/* Schedule Run */
+func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, deviceArn string, devicePoolArn string, appArn string, appFile string, appType string, testPackageArn string, testPackageFile string, testType string) {
+
+	// Upload the app file if there is one
 	if appFile != "" {
 		uploadApp, err := uploadPut(svc, appFile, appType, projectArn, "")
+
+		// Try to guess the upload type based on the filename
+		if appType == "" {
+			appType, err = guessAppType(appFile)
+		}
+
 		failOnErr(err, "error scheduling run")
 		appArn = *uploadApp.ARN
 	}
 
+	// Try to guess the upload type based on the filename
+	/*
+		if testType == "" {
+			testType, err := guessTestType(testPackageFile)
+		}
+	*/
+
+	testPackageType, err := lookupTestPackageType(testType)
+
+	// Upload the testPackage file if there is one
 	if testPackageFile != "" {
-		uploadTestPackage, err := uploadPut(svc, testPackageFile, "CALABASH_TEST_PACKAGE", projectArn, "")
-		//uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
+
+		uploadTestPackage, err := uploadPut(svc, testPackageFile, testPackageType, projectArn, "")
 		failOnErr(err, "error scheduling run")
 		testPackageArn = *uploadTestPackage.ARN
 	}
 
 	runTest := &devicefarm.ScheduleRunTest{
-		Type:           aws.String(testPackageType),
+		Type:           aws.String(testType),
 		TestPackageARN: aws.String(testPackageArn),
 		//Parameters: // test parameters
 		//Filter: // filter to pass to tests
