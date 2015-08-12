@@ -37,6 +37,38 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:  "create",
+			Usage: "create devicefarm elements", // of an account
+			Subcommands: []cli.Command{
+				{
+					Name:  "devicepool",
+					Usage: "create devicepool from device",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:   "project",
+							EnvVar: "DF_PROJECT",
+							Usage:  "project arn or project description",
+						},
+						cli.StringFlag{
+							Name:   "device",
+							EnvVar: "DF_DEVICE",
+							Usage:  "device name",
+						},
+						cli.StringFlag{
+							Name:  "name",
+							Usage: "pool name",
+						},
+					},
+					Action: func(c *cli.Context) {
+						projectArn := c.String("project")
+						deviceName := c.String("device")
+						poolName := c.String("name")
+						createPoolFromDevice(svc, poolName, deviceName, projectArn)
+					},
+				},
+			},
+		},
+		{
 			Name:  "list",
 			Usage: "list various elements on devicefarm",
 			Subcommands: []cli.Command{
@@ -482,6 +514,60 @@ func main() {
 }
 
 // --- internal API starts here
+func lookupDeviceArn(svc *devicefarm.DeviceFarm, deviceName string) (deviceArn string, err error) {
+
+	input := &devicefarm.ListDevicesInput{}
+	resp, err := svc.ListDevices(input)
+
+	failOnErr(err, "error listing devices")
+	//fmt.Println(awsutil.Prettify(resp))
+
+	devices := make(map[string]string)
+	for _, m := range resp.Devices {
+		key := fmt.Sprintf("%s - %s", *m.Name, *m.Os)
+		devices[key] = *m.ARN
+		//line := []string{*m.Name, *m.Os, *m.Platform, *m.FormFactor, *m.ARN}
+	}
+
+	arn := devices[deviceName]
+
+	if arn != "" {
+		return arn, nil
+	}
+
+	return "", errors.New("failed to find a device with name " + deviceName)
+
+}
+
+func createPoolFromDevice(svc *devicefarm.DeviceFarm, poolName string, deviceName string, projectArn string) (poolArn string, poolErr error) {
+
+	deviceArn, err := lookupDeviceArn(svc, deviceName)
+	failOnErr(err, "error looking up device")
+
+	fmt.Printf("creating %s", deviceArn)
+	req := &devicefarm.CreateDevicePoolInput{
+		Name:        aws.String(poolName),
+		Description: aws.String("autocreated pool " + poolName),
+		ProjectARN:  aws.String(projectArn),
+		Rules: []*devicefarm.Rule{
+			&devicefarm.Rule{
+				Attribute: aws.String("ARN"),
+				Operator:  aws.String("IN"),
+				// Value: "[\"arn:aws:devicefarm:us-west-2::device:6A553F3B3D384DB1A780C590FCC7F85D\"]"
+				Value: aws.String("[\"" + deviceArn + "\"]"),
+			},
+		},
+	}
+
+	resp, err := svc.CreateDevicePool(req)
+
+	if err != nil {
+		return "", err
+	}
+
+	return *resp.DevicePool.ARN, nil
+	//fmt.Println(awsutil.Prettify(resp))
+}
 
 /* List all Projects */
 func listProjects(svc *devicefarm.DeviceFarm) {
@@ -732,6 +818,20 @@ func scheduleRun(svc *devicefarm.DeviceFarm, projectArn string, runName string, 
 
 		fmt.Printf("\n")
 		appArn = *uploadApp.ARN
+	}
+
+	if devicePoolArn == "" {
+		if deviceArn != "" {
+			// Try to create pool from device ARN
+			foundArn, err := createPoolFromDevice(svc, deviceArn, deviceArn, projectArn)
+
+			if err != nil {
+				return err
+			}
+			devicePoolArn = foundArn
+		} else {
+			return errors.New("we need a device/devicepool to run on")
+		}
 	}
 
 	// Try to guess the upload type based on the filename
